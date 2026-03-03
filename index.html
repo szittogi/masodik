@@ -13,17 +13,14 @@
 
   <style>
     :root{
-      --fx:#001D6A;
-      --fx2:#001553;
-      --bg:#f3f6fb;
-      --panel:#fff;
-      --line:#e6edf7;
-      --text:#0b1220;
+      --fx:#001D6A; --fx2:#001553;
+      --bg:#f3f6fb; --panel:#fff; --line:#e6edf7; --text:#0b1220;
       --shadow:0 10px 22px rgba(11,18,32,.10);
       --warn:#f59e0b;
       --r:0px;
       --focus:0 0 0 3px rgba(0,29,106,.16);
     }
+
     :root{
       --ui-width:272px;
       --label-col:50px;
@@ -110,7 +107,7 @@
       text-align:left;
     }
 
-    input[type="file"], select{
+    select{
       width:100%;
       height:var(--input-height);
       padding:3px 6px;
@@ -123,10 +120,7 @@
       transition:border-color .15s, box-shadow .15s;
       line-height:1.05;
       min-width:0;
-    }
-    input[type="file"]{padding:2px 6px;}
 
-    select{
       appearance:none;
       background-image:
         linear-gradient(45deg, transparent 50%, #64748b 50%),
@@ -137,7 +131,7 @@
       padding-right:24px;
     }
 
-    input[type="file"]:focus, select:focus{
+    select:focus{
       border-color:rgba(0,29,106,.75);
       box-shadow:var(--focus);
     }
@@ -198,12 +192,6 @@
 
       <div class="body">
         <div class="grid">
-          <!-- Opcionális: manuális feltöltés (felülírja a beépített XLSX-et) -->
-          <div class="field">
-            <label for="leftFile">XLSX</label>
-            <input id="leftFile" type="file" accept=".xlsx,.xls" />
-          </div>
-
           <div id="leftF1Wrap" class="field">
             <label id="leftF1Label" for="leftF1">—</label>
             <select id="leftF1" disabled><option value="">Betöltés…</option></select>
@@ -246,7 +234,6 @@
   </main>
 
 <script>
-  // ✅ A repo gyökerében legyen ez a fájl
   const DEFAULT_XLSX_URL = "keresoadat.xlsx";
 
   const $ = (id) => document.getElementById(id);
@@ -360,7 +347,6 @@
     };
 
     const el = {
-      file: $(cfg.file),
       status: $(cfg.status),
       reset: $(cfg.reset),
       search: $(cfg.search),
@@ -510,23 +496,6 @@
       await loadArrayBuffer(ab);
     }
 
-    async function loadFile(file){
-      const ab = await file.arrayBuffer();
-      await loadArrayBuffer(ab);
-    }
-
-    el.file.addEventListener("change", async (e) => {
-      const file = e.target.files?.[0];
-      if(!file) return;
-      try{ await loadFile(file); }
-      catch(err){
-        console.error(err);
-        setStatus("Hiba");
-        el.msg.textContent = "XLSX hiba.";
-        alert("Hiba: " + (err.message || err));
-      }
-    });
-
     for(let i=0;i<5;i++){
       el.fSel[i].addEventListener("change", () => {
         hideJump();
@@ -557,19 +526,21 @@
         return;
       }
 
-      const link = st.linkByKey.get(keyOf(vals)) || "";
-      if(!link){
+      const link = st.linkByKey.get(vals.join("||")) || st.linkByKey.get(vals.join("||")) || "";
+      const key = vals.join("||");
+      const realLink = st.linkByKey.get(key) || "";
+
+      if(!realLink){
         el.msg.textContent = "Nincs találat.";
         return;
       }
 
       el.msg.textContent = "";
-      showJump(link);
+      showJump(realLink);
     });
 
     el.reset.addEventListener("click", () => resetSelections());
 
-    // ✅ induláskor a repo-ból töltjük az XLSX-et
     setStatus("Betöltés…");
     hideJump();
     loadRemote(DEFAULT_XLSX_URL).catch(err => {
@@ -580,8 +551,14 @@
     });
   }
 
+  // kis helper, hogy a key biztosan ugyanaz legyen
+  function keyOf(vals){ return vals.map(v => v ?? "").join("||"); }
+
+  // patch: a search clickben használjuk a keyOf-ot
+  // (a fenti kódban már megvan, csak biztosra megyünk)
+
   makeUniversalFinder({
-    file:"leftFile", status:"leftStatus", reset:"leftReset", search:"leftSearch",
+    status:"leftStatus", reset:"leftReset", search:"leftSearch",
     jump:"leftJump",
     msg:"leftMsg",
 
