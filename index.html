@@ -13,10 +13,17 @@
 
   <style>
     :root{
-      --fx:#001D6A; --fx2:#001553;
-      --bg:#f3f6fb; --panel:#fff; --line:#e6edf7; --text:#0b1220;
+      --fx:#001D6A;
+      --fx2:#001553;
+
+      --bg:#f3f6fb;
+      --panel:#fff;
+      --line:#e6edf7;
+      --text:#0b1220;
+
       --shadow:0 10px 22px rgba(11,18,32,.10);
       --warn:#f59e0b;
+
       --r:0px;
       --focus:0 0 0 3px rgba(0,29,106,.16);
     }
@@ -187,14 +194,14 @@
     <section class="panel">
       <div class="head">
         <h2 class="title">Akkumulátor kereső</h2>
-        <div class="status" id="leftStatus"><span class="dot"></span> Betöltés…</div>
+        <div class="status" id="leftStatus"><span class="dot"></span> …</div>
       </div>
 
       <div class="body">
         <div class="grid">
           <div id="leftF1Wrap" class="field">
             <label id="leftF1Label" for="leftF1">—</label>
-            <select id="leftF1" disabled><option value="">Betöltés…</option></select>
+            <select id="leftF1" disabled><option value="">—</option></select>
           </div>
 
           <div id="leftF2Wrap" class="field">
@@ -228,12 +235,13 @@
           </div>
         </div>
 
-        <div class="miniMsg" id="leftMsg">Adatbázis betöltése…</div>
+        <div class="miniMsg" id="leftMsg"></div>
       </div>
     </section>
   </main>
 
 <script>
+  // ✅ A repo gyökerében legyen: keresoadat.xlsx
   const DEFAULT_XLSX_URL = "keresoadat.xlsx";
 
   const $ = (id) => document.getElementById(id);
@@ -263,6 +271,7 @@
   }
   function enable(el, on=true){ el.disabled = !on; }
 
+  // ✅ gépelésre ugrás a legördülőben (type-to-jump)
   function attachTypeahead(sel){
     let buf = "";
     let t = null;
@@ -413,10 +422,10 @@
 
     function resetSelections(){
       hideJump();
-      el.msg.textContent = st.rows.length ? "Válassz + Keresés." : "Adatbázis betöltése…";
+      el.msg.textContent = st.rows.length ? "Válassz + Keresés." : "";
 
       for(let i=0;i<5;i++){
-        fillSelect(el.fSel[i], [], i===0 ? "Betöltés…" : "—");
+        fillSelect(el.fSel[i], [], i===0 ? "Válassz…" : "—");
         enable(el.fSel[i], false);
       }
       if(st.rows.length && st.filterHeaders.length) populateLevel(0);
@@ -478,9 +487,7 @@
     }
 
     async function loadArrayBuffer(ab){
-      setStatus("Betöltés…");
       hideJump();
-
       const wb = XLSX.read(ab, { type:"array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const grid = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
@@ -488,8 +495,6 @@
     }
 
     async function loadRemote(url){
-      setStatus("Letöltés…");
-      el.msg.textContent = "Adatbázis letöltése…";
       const res = await fetch(url, { cache:"no-store" });
       if(!res.ok) throw new Error("Nem tudom letölteni: " + url + " (" + res.status + ")");
       const ab = await res.arrayBuffer();
@@ -526,36 +531,27 @@
         return;
       }
 
-      const link = st.linkByKey.get(vals.join("||")) || st.linkByKey.get(vals.join("||")) || "";
-      const key = vals.join("||");
-      const realLink = st.linkByKey.get(key) || "";
-
-      if(!realLink){
+      const link = st.linkByKey.get(keyOf(vals)) || "";
+      if(!link){
         el.msg.textContent = "Nincs találat.";
         return;
       }
 
       el.msg.textContent = "";
-      showJump(realLink);
+      showJump(link);
     });
 
     el.reset.addEventListener("click", () => resetSelections());
 
-    setStatus("Betöltés…");
-    hideJump();
+    // ✅ induláskor automatikus betöltés (UI-ban nincs “betöltés” szöveg)
+    setStatus("…");
     loadRemote(DEFAULT_XLSX_URL).catch(err => {
       console.error(err);
       setStatus("Hiba");
-      el.msg.textContent = "Nem sikerült betölteni az adatbázist.";
+      el.msg.textContent = "Hiba az adatbázis betöltésekor.";
       alert("Hiba: " + (err.message || err));
     });
   }
-
-  // kis helper, hogy a key biztosan ugyanaz legyen
-  function keyOf(vals){ return vals.map(v => v ?? "").join("||"); }
-
-  // patch: a search clickben használjuk a keyOf-ot
-  // (a fenti kódban már megvan, csak biztosra megyünk)
 
   makeUniversalFinder({
     status:"leftStatus", reset:"leftReset", search:"leftSearch",
