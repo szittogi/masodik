@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Forex – Akkumulátor kereső</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --fx:#001D6A;
+      --fx2:#001553;
+      --bg:#f3f6fb;
+      --panel:#fff;
+      --line:#e6edf7;
+      --text:#0b1220;
+      --shadow:0 10px 22px rgba(11,18,32,.10);
+      --warn:#f59e0b;
+      --r:0px;
+      --focus:0 0 0 3px rgba(0,29,106,.16);
+    }
+    :root{
+      --ui-width:272px;
+      --label-col:50px;
+      --label-gap:0px;
+      --row-gap:4px;
+      --input-height:23px;
+      --input-font:10px;
+      --label-font:9px;
+
+      --ui-padding:4px;
+      --body-pad:8px;
+
+      --btn-font:10.5px;
+      --btn-pad-y:5px;
+      --btn-pad-x:7px;
+
+      --head-pad-y:7px;
+      --head-pad-x:8px;
+      --title-font:11.5px;
+      --status-font:9.5px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Manrope",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 340px at 15% 0%, rgba(0,29,106,.08), transparent 55%),
+        radial-gradient(700px 280px at 85% 8%, rgba(0,29,106,.06), transparent 50%),
+        linear-gradient(180deg, #f7f9fd 0%, var(--bg) 60%, #f7f9fd 100%);
+    }
+
+    .top{height:4px;background:var(--fx);box-shadow:0 8px 14px rgba(2,6,23,.10);}
+    .wrap{max-width:var(--ui-width);margin:8px auto 10px;padding:0 var(--ui-padding);}
+
+    .panel{
+      background:var(--panel);
+      border:2px solid var(--fx);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .head{
+      padding:var(--head-pad-y) var(--head-pad-x);
+      border-bottom:2px solid var(--fx);
+      background:linear-gradient(180deg,#fff 0%, #fbfdff 100%);
+      display:flex;align-items:center;justify-content:space-between;gap:6px;
+    }
+    .title{margin:0;font-size:var(--title-font);font-weight:900;letter-spacing:.1px;}
+    .status{
+      display:inline-flex;align-items:center;gap:5px;
+      padding:3px 6px;border-radius:999px;
+      background:rgba(0,29,106,.08);color:var(--fx);
+      font-weight:900;font-size:var(--status-font);white-space:nowrap;
+    }
+    .dot{
+      width:6px;height:6px;border-radius:999px;
+      background:rgba(0,29,106,.70);
+      box-shadow:0 0 0 3px rgba(0,29,106,.12);
+    }
+
+    .body{padding:var(--body-pad);}
+    .grid{display:grid;grid-template-columns:1fr;gap:var(--row-gap);}
+
+    .field{
+      display:grid;
+      grid-template-columns: var(--label-col) 1fr;
+      align-items:center;
+      column-gap:var(--label-gap);
+    }
+
+    label{
+      display:block;
+      font-size:var(--label-font);
+      color:#334155;
+      font-weight:900;
+      margin:0;
+      line-height:1.05;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      text-align:left;
+    }
+
+    input[type="file"], select{
+      width:100%;
+      height:var(--input-height);
+      padding:3px 6px;
+      border-radius:0;
+      border:1px solid var(--fx);
+      background:#fff;
+      color:var(--text);
+      font-size:var(--input-font);
+      outline:none;
+      transition:border-color .15s, box-shadow .15s;
+      line-height:1.05;
+      min-width:0;
+    }
+    input[type="file"]{padding:2px 6px;}
+
+    select{
+      appearance:none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, #64748b 50%),
+        linear-gradient(135deg, #64748b 50%, transparent 50%);
+      background-position:calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+      background-size:6px 6px,6px 6px;
+      background-repeat:no-repeat;
+      padding-right:24px;
+    }
+
+    input[type="file"]:focus, select:focus{
+      border-color:rgba(0,29,106,.75);
+      box-shadow:var(--focus);
+    }
+
+    .actionsRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:6px;
+      margin-top:7px;
+    }
+    .actionsLeft{display:flex;align-items:center;gap:6px;min-width:0;}
+    .actionsRight{display:flex;align-items:center;gap:6px;margin-left:auto;}
+
+    .btn{
+      border-radius:0;
+      padding:var(--btn-pad-y) var(--btn-pad-x);
+      font-weight:900;
+      font-size:var(--btn-font);
+      cursor:pointer;
+      user-select:none;
+      border:1px solid var(--fx);
+      transition:transform .05s, background .15s, border-color .15s;
+      line-height:1.05;
+      white-space:nowrap;
+      background:#fff;
+      color:var(--fx);
+    }
+    .btn:active{transform:translateY(1px);}
+    .btn:disabled{opacity:.55; cursor:not-allowed;}
+
+    .btn-primary{color:#fff;background:var(--fx);border-color:var(--fx);}
+    .btn-secondary{color:var(--fx);background:#fff;border-color:var(--fx);}
+
+    .ghost{visibility:hidden;pointer-events:none;}
+
+    .miniMsg{
+      margin-top:6px;
+      font-size:10.5px;
+      font-weight:900;
+      line-height:1.1;
+      color:var(--warn);
+      min-height:12px;
+    }
+    .hidden{display:none!important;}
+  </style>
+</head>
+
+<body>
+  <div class="top"></div>
+
+  <main class="wrap">
+    <section class="panel">
+      <div class="head">
+        <h2 class="title">Akkumulátor kereső</h2>
+        <div class="status" id="leftStatus"><span class="dot"></span> Betöltés…</div>
+      </div>
+
+      <div class="body">
+        <div class="grid">
+          <!-- Opcionális: manuális feltöltés (felülírja a beépített XLSX-et) -->
+          <div class="field">
+            <label for="leftFile">XLSX</label>
+            <input id="leftFile" type="file" accept=".xlsx,.xls" />
+          </div>
+
+          <div id="leftF1Wrap" class="field">
+            <label id="leftF1Label" for="leftF1">—</label>
+            <select id="leftF1" disabled><option value="">Betöltés…</option></select>
+          </div>
+
+          <div id="leftF2Wrap" class="field">
+            <label id="leftF2Label" for="leftF2">—</label>
+            <select id="leftF2" disabled><option value="">—</option></select>
+          </div>
+
+          <div id="leftF3Wrap" class="field">
+            <label id="leftF3Label" for="leftF3">—</label>
+            <select id="leftF3" disabled><option value="">—</option></select>
+          </div>
+
+          <div id="leftF4Wrap" class="field">
+            <label id="leftF4Label" for="leftF4">—</label>
+            <select id="leftF4" disabled><option value="">—</option></select>
+          </div>
+
+          <div id="leftF5Wrap" class="field">
+            <label id="leftF5Label" for="leftF5">—</label>
+            <select id="leftF5" disabled><option value="">—</option></select>
+          </div>
+        </div>
+
+        <div class="actionsRow">
+          <div class="actionsLeft">
+            <button class="btn btn-primary ghost" id="leftJump" type="button">Ugrás a találatokhoz</button>
+          </div>
+          <div class="actionsRight">
+            <button class="btn btn-secondary" id="leftReset" disabled>Reset</button>
+            <button class="btn btn-primary" id="leftSearch" disabled>Keresés</button>
+          </div>
+        </div>
+
+        <div class="miniMsg" id="leftMsg">Adatbázis betöltése…</div>
+      </div>
+    </section>
+  </main>
+
+<script>
+  // ✅ A repo gyökerében legyen ez a fájl
+  const DEFAULT_XLSX_URL = "keresoadat.xlsx";
+
+  const $ = (id) => document.getElementById(id);
+  const norm = (s) => String(s ?? "").trim();
+
+  function simplify(s){
+    return String(s ?? "")
+      .trim().toLowerCase()
+      .replaceAll("á","a").replaceAll("é","e").replaceAll("í","i")
+      .replaceAll("ó","o").replaceAll("ö","o").replaceAll("ő","o")
+      .replaceAll("ú","u").replaceAll("ü","u").replaceAll("ű","u")
+      .replace(/\s+/g," ");
+  }
+
+  function fillSelect(sel, values, placeholder){
+    sel.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = placeholder || "Válassz…";
+    sel.appendChild(opt0);
+    for(const v of values){
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      sel.appendChild(opt);
+    }
+  }
+  function enable(el, on=true){ el.disabled = !on; }
+
+  function attachTypeahead(sel){
+    let buf = "";
+    let t = null;
+
+    sel.addEventListener("keydown", (e) => {
+      if (sel.disabled) return;
+
+      const isChar = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+      if (!isChar && e.key !== "Backspace" && e.key !== "Escape") return;
+
+      if (e.key === "Escape") { buf = ""; return; }
+      if (e.key === "Backspace") { buf = buf.slice(0, -1); return; }
+
+      buf += e.key.toLowerCase();
+      clearTimeout(t);
+      t = setTimeout(() => (buf = ""), 650);
+
+      const opts = Array.from(sel.options);
+      const idx = opts.findIndex(o =>
+        o.value && String(o.textContent || "").trim().toLowerCase().startsWith(buf)
+      );
+
+      if (idx > 0){
+        sel.selectedIndex = idx;
+        sel.dispatchEvent(new Event("change"));
+      }
+      e.preventDefault();
+    });
+  }
+
+  function findHeaderRow(grid){
+    const linkWords = ["link","url","href","weblink","web link"];
+    const maxScan = Math.min(grid.length, 60);
+
+    let best = null;
+    for(let r=0; r<maxScan; r++){
+      const row = grid[r] || [];
+      const cells = row.map(c => simplify(c));
+
+      let linkIdx = -1;
+      for(let i=0;i<cells.length;i++){
+        if(!cells[i]) continue;
+        if(linkWords.includes(cells[i]) || cells[i].includes("link") || cells[i].includes("url")){
+          linkIdx = i; break;
+        }
+      }
+      if(linkIdx < 0) continue;
+
+      const headers = row.map(h => norm(h)).filter(h => h);
+      if(headers.length < 2) continue;
+
+      const score = headers.length;
+      if(!best || score > best.score){
+        best = { r, linkIdx, row, score };
+      }
+    }
+
+    if(!best){
+      for(let r=0; r<maxScan; r++){
+        const row = grid[r] || [];
+        const headers = row.map(h => norm(h)).filter(h => h);
+        if(headers.length >= 2){
+          const cells = row.map(c => simplify(c));
+          let linkIdx = cells.findIndex(x => x === "link" || x.includes("link") || x.includes("url"));
+          if(linkIdx < 0) linkIdx = row.length - 1;
+          best = { r, linkIdx, row, score: headers.length };
+          break;
+        }
+      }
+    }
+    return best;
+  }
+
+  function makeUniversalFinder(cfg){
+    const st = {
+      filterHeaders: [],
+      filterIdxs: [],
+      rows: [],
+      maps: [],
+      linkByKey: new Map(),
+      lastLink: ""
+    };
+
+    const el = {
+      file: $(cfg.file),
+      status: $(cfg.status),
+      reset: $(cfg.reset),
+      search: $(cfg.search),
+      jump: $(cfg.jump),
+      msg: $(cfg.msg),
+
+      fWrap: [$(cfg.f1Wrap), $(cfg.f2Wrap), $(cfg.f3Wrap), $(cfg.f4Wrap), $(cfg.f5Wrap)],
+      fLabel:[$(cfg.f1Label),$(cfg.f2Label),$(cfg.f3Label),$(cfg.f4Label),$(cfg.f5Label)],
+      fSel:  [$(cfg.f1),     $(cfg.f2),     $(cfg.f3),     $(cfg.f4),     $(cfg.f5)]
+    };
+
+    el.fSel.forEach(attachTypeahead);
+
+    function setStatus(text){ el.status.lastChild.nodeValue = " " + text; }
+    function keyOf(vals){ return vals.map(v => v ?? "").join("||"); }
+
+    function hideJump(){
+      el.jump.classList.add("ghost");
+      el.jump.onclick = null;
+      st.lastLink = "";
+    }
+    function showJump(link){
+      st.lastLink = link;
+      el.jump.classList.remove("ghost");
+      el.jump.onclick = () => window.open(st.lastLink, "_blank", "noopener,noreferrer");
+    }
+
+    function applyFieldVisibility(){
+      for(let i=0;i<5;i++){
+        const on = i < st.filterHeaders.length;
+        el.fWrap[i].classList.toggle("hidden", !on);
+        if(on) el.fLabel[i].textContent = st.filterHeaders[i];
+      }
+    }
+
+    function buildCascades(){
+      st.maps = [];
+      for(let i=0;i<st.filterHeaders.length;i++) st.maps.push(new Map());
+      st.linkByKey = new Map();
+
+      for(const r of st.rows){
+        const fullKey = keyOf(r.vals);
+        if(!st.linkByKey.has(fullKey)) st.linkByKey.set(fullKey, r.link);
+
+        for(let i=0;i<st.filterHeaders.length;i++){
+          const prefix = keyOf(r.vals.slice(0,i));
+          const nextVal = r.vals[i];
+          const m = st.maps[i];
+          if(!m.has(prefix)) m.set(prefix, new Set());
+          m.get(prefix).add(nextVal);
+        }
+      }
+    }
+
+    function populateLevel(level){
+      const prefix = keyOf(el.fSel.slice(0, level).map(s => s.value));
+      const set = st.maps[level].get(prefix) || new Set();
+      const values = Array.from(set)
+        .filter(v => v !== "")
+        .sort((a,b)=> a.localeCompare(b, "hu", {numeric:true, sensitivity:"base"}));
+      fillSelect(el.fSel[level], values, "Válassz…");
+      enable(el.fSel[level], true);
+    }
+
+    function resetSelections(){
+      hideJump();
+      el.msg.textContent = st.rows.length ? "Válassz + Keresés." : "Adatbázis betöltése…";
+
+      for(let i=0;i<5;i++){
+        fillSelect(el.fSel[i], [], i===0 ? "Betöltés…" : "—");
+        enable(el.fSel[i], false);
+      }
+      if(st.rows.length && st.filterHeaders.length) populateLevel(0);
+    }
+
+    function parseGrid(grid){
+      const hdr = findHeaderRow(grid);
+      if(!hdr){
+        setStatus("Hiba");
+        throw new Error("Nem találok fejlécsort (kell egy 'Link' jellegű oszlop).");
+      }
+
+      const headerRow = hdr.r;
+      const headerCells = (hdr.row || []).map(h => norm(h));
+      const linkIdx = hdr.linkIdx;
+
+      const candidates = [];
+      for(let i=0;i<headerCells.length;i++){
+        const h = headerCells[i];
+        if(!h) continue;
+        if(i === linkIdx) continue;
+        candidates.push({ idx:i, name:h });
+      }
+
+      const filter = candidates.slice(0, 5);
+      if(filter.length === 0){
+        setStatus("Hiba");
+        throw new Error("Találtam Link oszlopot, de nincs más oszlop a szűréshez.");
+      }
+
+      st.filterHeaders = filter.map(x => x.name);
+      st.filterIdxs = filter.map(x => x.idx);
+
+      st.rows = [];
+      for(let r = headerRow + 1; r < grid.length; r++){
+        const row = grid[r] || [];
+        const link = norm(row[linkIdx]);
+        if(!link) continue;
+
+        const vals = st.filterIdxs.map(ix => norm(row[ix]));
+        if(vals.every(v => !v)) continue;
+
+        st.rows.push({ vals, link });
+      }
+
+      if(st.rows.length === 0){
+        setStatus("Hiba");
+        throw new Error("0 adatsor. Ellenőrizd: a Link oszlopban vannak URL-ek.");
+      }
+
+      applyFieldVisibility();
+      buildCascades();
+
+      el.search.disabled = false;
+      el.reset.disabled = false;
+
+      setStatus("Fájl OK");
+      resetSelections();
+    }
+
+    async function loadArrayBuffer(ab){
+      setStatus("Betöltés…");
+      hideJump();
+
+      const wb = XLSX.read(ab, { type:"array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const grid = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+      parseGrid(grid);
+    }
+
+    async function loadRemote(url){
+      setStatus("Letöltés…");
+      el.msg.textContent = "Adatbázis letöltése…";
+      const res = await fetch(url, { cache:"no-store" });
+      if(!res.ok) throw new Error("Nem tudom letölteni: " + url + " (" + res.status + ")");
+      const ab = await res.arrayBuffer();
+      await loadArrayBuffer(ab);
+    }
+
+    async function loadFile(file){
+      const ab = await file.arrayBuffer();
+      await loadArrayBuffer(ab);
+    }
+
+    el.file.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if(!file) return;
+      try{ await loadFile(file); }
+      catch(err){
+        console.error(err);
+        setStatus("Hiba");
+        el.msg.textContent = "XLSX hiba.";
+        alert("Hiba: " + (err.message || err));
+      }
+    });
+
+    for(let i=0;i<5;i++){
+      el.fSel[i].addEventListener("change", () => {
+        hideJump();
+
+        for(let j=i+1;j<5;j++){
+          fillSelect(el.fSel[j], [], "—");
+          enable(el.fSel[j], false);
+        }
+
+        const next = i+1;
+        if(next < st.filterHeaders.length){
+          const ok = el.fSel.slice(0, next).every(s => s.value);
+          if(ok) populateLevel(next);
+        }
+
+        el.msg.textContent = "Válassz + Keresés.";
+      });
+    }
+
+    el.search.addEventListener("click", () => {
+      hideJump();
+
+      const needed = st.filterHeaders.length;
+      const vals = el.fSel.slice(0, needed).map(s => s.value);
+
+      if(vals.some(v => !v)){
+        el.msg.textContent = `Hiányzik mező (${needed} db).`;
+        return;
+      }
+
+      const link = st.linkByKey.get(keyOf(vals)) || "";
+      if(!link){
+        el.msg.textContent = "Nincs találat.";
+        return;
+      }
+
+      el.msg.textContent = "";
+      showJump(link);
+    });
+
+    el.reset.addEventListener("click", () => resetSelections());
+
+    // ✅ induláskor a repo-ból töltjük az XLSX-et
+    setStatus("Betöltés…");
+    hideJump();
+    loadRemote(DEFAULT_XLSX_URL).catch(err => {
+      console.error(err);
+      setStatus("Hiba");
+      el.msg.textContent = "Nem sikerült betölteni az adatbázist.";
+      alert("Hiba: " + (err.message || err));
+    });
+  }
+
+  makeUniversalFinder({
+    file:"leftFile", status:"leftStatus", reset:"leftReset", search:"leftSearch",
+    jump:"leftJump",
+    msg:"leftMsg",
+
+    f1Wrap:"leftF1Wrap", f1Label:"leftF1Label", f1:"leftF1",
+    f2Wrap:"leftF2Wrap", f2Label:"leftF2Label", f2:"leftF2",
+    f3Wrap:"leftF3Wrap", f3Label:"leftF3Label", f3:"leftF3",
+    f4Wrap:"leftF4Wrap", f4Label:"leftF4Label", f4:"leftF4",
+    f5Wrap:"leftF5Wrap", f5Label:"leftF5Label", f5:"leftF5",
+  });
+</script>
+</body>
+</html>
